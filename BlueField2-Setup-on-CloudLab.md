@@ -54,11 +54,15 @@ r7525 servers in Clemson with Ubuntu 20.04 LTS
 
 ## Scalable Functions
 All the operations below are performed on BF-2
+
+if needed, `mst start; mst status` to find mst devices
+
 - Make sure BF-2 is in the SmartNIC (Embedded Function) mode: `mlxconfig -d /dev/mst/mt41686_pciconf0 q | grep -i internal_cpu_model`  (41692 for BF-3)
   - Expected result is EMBEDDED_CPU(1)
   - Otherwise, make the change with `mlxconfig -d /dev/mst/mt41686_pciconf0 s INTERNAL_CPU_MODEL=1` and power cycle the machine
 - To enable scalable functions (SFs), change the PCIe address for each port by `mlxconfig -d 0000:03:00.0 s PF_BAR2_ENABLE=0 PER_PF_NUM_SF=1 PF_TOTAL_SF=236 PF_SF_BAR_SIZE=10`
 
+   - `devlink dev eswitch set pci/[0000:03:00.0] mode switchdev` if it says something about eswitch mode
    - Power cycle the machine after the change
 
 - `devlink dev show` to check the sfnum to use, the sfnum value in the next command should be the largest shown + 1
@@ -114,7 +118,7 @@ The host and BF-2 can communicate with RDMA through the CX-6 interface
 
   - `ib_read_lat` etc. would require an IB device, `mlx5_*`, the number should be the same as SF num, i.e. `4` in this case.
     - `sudo ibdev2netdev -v`
-    - `ib_stat` and `ibv_devinfo -d [mlx5_*]` can be useful
+    - `ibstat` and `ibv_devinfo -d [mlx5_*]` can be useful
 
 
 ## DOCA Build Setup
@@ -127,7 +131,7 @@ To use DPDK:
 - `export PKG_CONFIG_PATH=${PKG_CONFIG_PATH}:/opt/mellanox/dpdk/lib64/pkgconfig`
 
 ## Client-Server Setup
-To set up a client-server cluster where the client connects to the server with a 100 Gbps link (BF-2 is on the server), we use r6425 as the client (the server is still r7525).
+To set up a client-server cluster where the client connects to the server with a 100 Gbps link (BF-2 is on the server), we use r6525 as the client (the server is still r7525).
 Below shows the CloudLab profile (`smartnic-2nodes` in fardatalab).
 
 ```
