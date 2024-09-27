@@ -4,6 +4,35 @@ This post describes how to set up BlueField-2 (BF-2) development environment on 
 r7525 servers in Clemson with Ubuntu 20.04 LTS
 
 ## Basic Setup
+
+The SDK manager no longer works, use this step by step manual setup guide:
+
+https://docs.nvidia.com/doca/archive/doca-v1.5.1/installation-guide-for-linux/index.html
+
+Then after finishing that, skip to the ***OVS Bridge*** setup part in this doc.
+
+A complete installation also requires Internet access on BF-2. To enable that:
+
+- On the host (sudo), run `echo 1 | tee /proc/sys/net/ipv4/ip_forward` to allow IP forwarding and `iptables -t nat -A POSTROUTING -o [public IP interface, e.g., eno1] -j MASQUERADE` to enable NAT on the public interface
+
+  - ```sh
+    sudo echo 1 | sudo tee /proc/sys/net/ipv4/ip_forward
+    sudo iptables -t nat -A POSTROUTING -o eno1 -j MASQUERADE
+    ```
+
+- On BF-2 (sudo), run `echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf` to set a DNS server and `ping google.com` to finally check Internet connection
+
+  - ```sh
+    echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
+    echo "23.33.40.145 nvidia.com" | sudo tee -a /etc/hosts
+    ```
+
+- To log into the DPU, `ssh ubuntu@192.168.100.2`
+
+  
+
+##### (Deprecated setup instructions using SDK Manager)
+
 - Download NVIDIA SDK Manager installer [here](https://developer.nvidia.com/sdk-manager) (NVIDIA developer account login required) 
 
 - Upload the installer (`sdkmanager_2.0.0-11402_amd64.deb`) to the server host and install it with `sudo apt install ./sdkmanager_2.0.0-11402_amd64.deb` 
@@ -12,48 +41,42 @@ r7525 servers in Clemson with Ubuntu 20.04 LTS
 
 - During the above installation, it requires specifying the account password for DPU login (user: `ubuntu`, password: `ubuntu`)
 
-- A complete installation also requires Internet access on BF-2. To enable that:
-  - On the host (sudo), run `echo 1 | tee /proc/sys/net/ipv4/ip_forward` to allow IP forwarding and `iptables -t nat -A POSTROUTING -o [public IP interface, e.g., eno1] -j MASQUERADE` to enable NAT on the public interface
-  
-    - ```sh
-      sudo echo 1 | sudo tee /proc/sys/net/ipv4/ip_forward
-      sudo iptables -t nat -A POSTROUTING -o eno1 -j MASQUERADE
-      ```
-  
-  - Update [Dec. 3, 2023]: "Burn Target Firmware" and "DOCA Software Package" installation failed. Need to make the following changes before proceeding to the two steps:
-    - ***Probably NOT needed anymore***: Change IP of `google.com` and `packages.cloud.google.com` to `142.251.215.238` in `/etc/hosts`
-  
-    - Update [Jan. 29, 2024]: didn't need to change or do the other steps here, but did need to change `nvidia.com` to `23.33.40.145` in `/etc/hosts`, in order to continue with DOCA Software Package installation (this is only for checking internet connection which ping's `nvidia.com` who doesn't respond back)
-  
-    - ~~Update [Mar 16]: kubernetes deprecated google packages and apt.kubernetes.io, however, nvidia sdk manager is still hard coded to use those ppa repo by **overwriting** the `kubernetes.list`, so I had to use the following, then be running a tight bash loop to overwrite back what nvidia sdk manager has overwritten~~
-  
-    - ```shell
-      # Update: all these are unnecessary with the newer SDK manager
-      sudo mkdir -p /etc/apt/keyrings
-      echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
-      
-      curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-      ```
-      
-    - ~~`echo "deb [signed-by=/etc/apt/keyrings/kubernetes.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list`~~
-  
-    - ~~`curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes.gpg`~~
-  
-  - On BF-2 (sudo), run `echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf` to set a DNS server and `ping google.com` to finally check Internet connection
+- ~~Update [Dec. 3, 2023]: "Burn Target Firmware" and "DOCA Software Package" installation failed. Need to make the following changes before proceeding to the two steps:~~
+
+  - ~~***Probably NOT needed anymore***: Change IP of `google.com` and `packages.cloud.google.com` to `142.251.215.238` in `/etc/hosts`~~
+
+  - ~~Update [Jan. 29, 2024]: didn't need to change or do the other steps here, but did need to change `nvidia.com` to `23.33.40.145` in `/etc/hosts`, in order to continue with DOCA Software Package installation (this is only for checking internet connection which ping's `nvidia.com` who doesn't respond back)~~
+
+  - ~~Update [Mar 16]: kubernetes deprecated google packages and apt.kubernetes.io, however, nvidia sdk manager is still hard coded to use those ppa repo by **overwriting** the `kubernetes.list`, so I had to use the following, then be running a tight bash loop to overwrite back what nvidia sdk manager has overwritten~~
+
+  - ```shell
+    # Update: all these are unnecessary with the newer SDK manager
+    sudo mkdir -p /etc/apt/keyrings
+    echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
     
-    - ```sh
-      echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
-      echo "23.33.40.145 nvidia.com" | sudo tee -a /etc/hosts
-      ```
+    curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+    ```
     
-    - To log into the DPU, `ssh ubuntu@192.168.100.2`
-    
+  - ~~`echo "deb [signed-by=/etc/apt/keyrings/kubernetes.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list`~~
+
+  - ~~`curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes.gpg`~~
+
   - Update [Feb. 2, 2024]: Might also need to make sure unattended upgrade is not running during all this (`apt update` from DOCA will be unable to proceed in that case. If getting an error mentioning `dpkg`, kill that process and `sudo apt-get purge unattended-upgrades`, or purge/remove at the beforehand.
-  
+
 - The whole installation takes about an hour. Upon successful installation, ssh to BF-2 to access its resources
 
 ## Scalable Functions
-All the operations below are performed on BF-2
+All the operations below are performed on BF-2, with sudo privilege
+
+Use this tool `mlnx-sf` to setup the SF(s), `-n <n>` is the SF id/num, make sure it is unique.
+
+You'll be able to recognize the new interfaces with this SF id, e.g. `en3f0pf0sf9` (the new interface on the DPU) and `enp3s0f0s9` (the host representor)
+
+`sudo mlnx-sf -d 0000:03:00.0 -a create -n 9 -m 00:00:00:00:01:00 -t`
+
+
+
+##### The following (deprecated) section can also work for setting up SF(s) manually.
 
 if needed, `mst start; mst status` to find mst devices
 
@@ -100,7 +123,7 @@ Note: we can also directly use the existing bridge
 
 ## Host-BF2 RDMA
 The host and BF-2 can communicate with RDMA through the CX-6 interface
-- First, pick one of the SFs (e.g., `en3f0pf0sf4`) and configure its representor (`enp3s0f0s4`) with an IP address (in the local subnet): `ifconfig enp3s0f0s4 10.10.1.42/24` ==NOTE: use the actual subnet==
+- First, pick one of the SFs (e.g., `en3f0pf0sf`) and configure its representor (`enp3s0f0s4`) with an IP address (in the local subnet): `ifconfig enp3s0f0s4 10.10.1.42/24` ==NOTE: use the actual subnet==
   - Note: ==not just any one, pick the one that's with `pf0hpf`== (i.e., `p0`, `pf0hpf` and the SF should be under the same ovs bridge)
 
 - Configure the MTU value to, say 9000, on the port representor, otherwise default of 1024 seems to mess with RDMA `ib_read_lat` etc.
