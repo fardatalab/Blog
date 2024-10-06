@@ -68,6 +68,13 @@ A complete installation also requires Internet access on BF-2. To enable that:
 ## Scalable Functions
 All the operations below are performed on BF-2, with sudo privilege
 
+- Make sure BF-2 is in the SmartNIC (Embedded Function) mode: `mlxconfig -d /dev/mst/mt41686_pciconf0 q | grep -i internal_cpu_model`  (41692 for BF-3)
+  - Expected result is EMBEDDED_CPU(1)
+  - Otherwise, make the change with `mlxconfig -d /dev/mst/mt41686_pciconf0 s INTERNAL_CPU_MODEL=1` and power cycle the machine
+- To enable scalable functions (SFs), change the PCIe address for each port by `mlxconfig -d 0000:03:00.0 s PF_BAR2_ENABLE=0 PER_PF_NUM_SF=1 PF_TOTAL_SF=236 PF_SF_BAR_SIZE=10`
+
+
+
 Use this tool `mlnx-sf` to setup the SF(s), `-n <n>` is the SF id/num, make sure it is unique.
 
 You'll be able to recognize the new interfaces with this SF id, e.g. `en3f0pf0sf9` (the new interface on the DPU) and `enp3s0f0s9` (the host representor)
@@ -76,7 +83,7 @@ You'll be able to recognize the new interfaces with this SF id, e.g. `en3f0pf0sf
 
 
 
-##### The following (deprecated) section can also work for setting up SF(s) manually.
+##### The following (deprecated) section can also work for setting up SF(s) manually. SKIP if you have already performed the ones above.
 
 if needed, `mst start; mst status` to find mst devices
 
@@ -107,11 +114,20 @@ if needed, `mst start; mst status` to find mst devices
 
 ## OVS Bridges
 We can use Open vSwitch (OVS) bridges to configure the connectivity between different interfaces (physical ports, physical functions, virtual functions, etc.)
+
+Note: the goal is to have the physical port (`p0`), the port representor (`pf0hpf`) and the SF's representor (`en3f0pf0sf<SF_id>`) under the same bridge
+
+Connect the new SF to the bridge: `ovs-vsctl add-port ovsbr1 en3f0pf0sf9`
+
+And it should be good to go - there should be a default SF, a p0 and pf0hpf under `ovsvr1` already.
+
+**You don't/shouldn't have to perform the following exactly like this, but you should understand why and what it is doing**
+
 - Delete the old bridge: `ovs-vsctl del-br ovsbr1`
 - Add a new bridge: `ovs-vsctl add-br sf_bridge1`
 - Connect a physical port to the bridge: `ovs-vsctl add-port sf_bridge1 p0`
 - ~~Connect an SF to the bridge: `ovs-vsctl add-port sf_bridge1 en3f0pf0sf1`~~
-- Connect the new SF to the bridge: `ovs-vsctl add-port sf_bridge1 en3f0pf0sf4 `
+- Connect the new SF to the bridge: `ovs-vsctl add-port sf_bridge1 en3f0pf0sf<SF_id> `
 - Add the second bridge: `ovs-vsctl add-br sf_bridge2`
 - Connect the host-facing port (representor) to the bridge: `ovs-vsctl add-port sf_bridge2 pf0hpf`
 - [Optionally?]Connect another SF to the bridge: `ovs-vsctl add-port sf_bridge2 en3f0pf0sf2`
