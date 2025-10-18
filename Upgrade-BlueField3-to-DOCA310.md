@@ -1,4 +1,4 @@
-This post describes how to upgrade to [DOCA v3.1.x](https://docs.nvidia.com/doca/archive/3-1-0/index.html) (from v2.5.y) on a server with a single BlueField-3 (BF-3).
+This post describes how to upgrade to [DOCA v3.1.0](https://docs.nvidia.com/doca/archive/3-1-0/index.html) (from v2.5.y) on a server with a single BlueField-3 (BF-3).
 
 ## Environment
 
@@ -54,6 +54,7 @@ This phase of the installation process is based on the [documentation](https://d
     ```
 
 3. Reload the `openibd` service.
+
 
     ```[sh]
     host$ sudo /etc/init.d/openibd restart
